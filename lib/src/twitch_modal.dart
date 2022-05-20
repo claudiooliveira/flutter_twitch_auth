@@ -32,68 +32,49 @@ class _TwitchModalContentState extends State<TwitchModalContent> {
     cookieManager.clearCookies();
   }
 
-  void _userAuth(String code) async {
-    setState(() {
-      isLoading = true;
-    });
-    var users = await FlutterTwitch.users.getUsersByCode(code);
-    setState(() {
-      isLoading = false;
-      Navigator.of(context).pop(users.data.first);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.transparent,
-      contentPadding: const EdgeInsets.all(0),
-      content: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          color: Theme.of(context).dialogBackgroundColor,
-          width: double.infinity,
-          height: MediaQuery.of(context).size.height * .8,
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () {
-                      Navigator.of(context).pop(null);
-                    },
-                  )
-                ],
-              ),
-              Expanded(
-                child: isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(),
-                      )
-                    : WebView(
-                        initialUrl: url,
-                        javascriptMode: JavascriptMode.unrestricted,
-                        onPageFinished: (String url) {
-                          if (url.contains("?code=")) {
-                            var split = url.split("?code=");
-                            split = split[split.length - 1].split("&");
-                            switch (widget.responseType) {
-                              case ModalResponseType.user:
-                                _userAuth(split[0]);
-                                break;
-                              case ModalResponseType.code:
-                                Navigator.of(context).pop(split[0]);
-                                break;
-                            }
-                          }
-                        },
-                      ),
-              ),
-            ],
-          ),
-        ),
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: WebView(
+        initialUrl: url,
+        javascriptMode: JavascriptMode.unrestricted,
+        navigationDelegate: (NavigationRequest request) async {
+          try {
+            if (request.url
+                .contains(twitchAuthController.TWITCH_REDIRECT_URI)) {
+              final String? authCode =
+                  Uri.parse(request.url).queryParameters['code'];
+
+              /// Pop with the auth code
+              /// User will be retrieved using this on the app side
+              if (authCode != null) {
+                switch (widget.responseType) {
+                  case ModalResponseType.user:
+                    final users =
+                        await FlutterTwitch.users.getUsersByCode(authCode);
+                    Navigator.of(context).pop(users.data.first);
+
+                    break;
+                  case ModalResponseType.code:
+                    Navigator.of(context).pop(authCode);
+                    break;
+                }
+              }
+            }
+
+            // Continue navigation for any other url.
+            return NavigationDecision.navigate;
+          } catch (e) {
+            // Let the caller know that the flow is completed and
+            Navigator.of(context).pop();
+            // Prevent the navigation
+            return NavigationDecision.prevent;
+          }
+        },
       ),
     );
   }

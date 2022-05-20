@@ -58,16 +58,18 @@ class FlutterTwitchAuth {
   static FlutterTwitchAuth get instance => _instance!;
 
   static Future<String?> authToCode(BuildContext context) async {
-    return await showDialog(
-      context: context,
-      builder: (_) => const TwitchModalContent(ModalResponseType.code),
+    return Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) {
+        return const TwitchModalContent(ModalResponseType.code);
+      }),
     );
   }
 
   static Future<User?> authToUser(BuildContext context) async {
-    return await showDialog(
-      context: context,
-      builder: (_) => const TwitchModalContent(ModalResponseType.user),
+    return Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) {
+        return const TwitchModalContent(ModalResponseType.user);
+      }),
     );
   }
 
